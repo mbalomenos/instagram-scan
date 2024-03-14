@@ -5,30 +5,44 @@ import subprocess
 import requests
 from bs4 import BeautifulSoup
 
-# Function to install JADX from GitHub
+# Function to install JADX
 def install_jadx():
     try:
-        # Clone JADX repository from GitHub
-        subprocess.run(['git', 'clone', 'https://github.com/skylot/jadx.git'])
-        # Change directory to jadx
-        os.chdir('jadx')
-        # Build JADX using gradlew
-        subprocess.run(['./gradlew', 'dist'])
+        # Try installing JADX using apt
+        subprocess.run(['echo', 'kali' , '|', 'sudo', '-S', 'apt', 'install', 'jadx'])
+        # Check if JADX is installed successfully
+        if shutil.which('jadx') is None:
+            raise Exception("JADX installation using apt failed.")
     except Exception as e:
-        print("Error installing JADX:", e)
+        print("Error installing JADX using apt:", e)
+        try:
+            # Clone JADX repository from GitHub
+            subprocess.run(['git', 'clone', 'https://github.com/skylot/jadx.git'])
+            # Change directory to JADX
+            os.chdir('jadx')
+            # Build JADX using gradlew
+            subprocess.run(['./gradlew', 'dist'])
+        except Exception as e:
+            print("Error installing JADX from GitHub:", e)
+
+# Function to run JADX
+def run_jadx(apk_file, output_dir):
+    # Install JADX if not already installed
+    if shutil.which('jadx') is None:
+        install_jadx()
+
+    # Check if JADX is installed
+    if shutil.which('jadx') is not None:
+        # Run JADX
+        print("Running JADX...")
+        os.system(f"jadx -d {output_dir} {apk_file}")
+    else:
+        print("JADX is not installed. Please install JADX manually.")
 
 # Function to decompile APK file using JADX
 def decompile_apk(apk_file, output_dir):
     try:
-        # Check if JADX is installed, if not, install it
-        if not os.path.exists('jadx'):
-            print("JADX not found. Installing...")
-            install_jadx()
-        # Check if JADX installation was successful
-        if os.path.exists('jadx'):
-            os.system(f"jadx -d {output_dir} {apk_file}")
-        else:
-            print("JADX installation failed. Please install JADX manually.")
+        run_jadx(apk_file, output_dir)
     except Exception as e:
         print("Error decompiling APK:", e)
 
