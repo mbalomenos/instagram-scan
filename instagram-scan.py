@@ -7,19 +7,52 @@ from bs4 import BeautifulSoup
 
 # Function to decompile APK file using JADX
 def decompile_apk(apk_file, output_dir):
-    os.system(f"jadx -d {output_dir} {apk_file}")
+    try:
+        subprocess.run(["jadx", "-d", output_dir, apk_file], check=True)
+    except subprocess.CalledProcessError as e:
+        print("Error decompiling APK:", e)
 
 # Function to extract permissions from AndroidManifest.xml
 def extract_permissions(manifest_file):
     permissions = []
-    tree = ET.parse(manifest_file)
-    root = tree.getroot()
-    for elem in root.iter():
-        if elem.tag.endswith('uses-permission'):
-            permission = elem.attrib.get('{http://schemas.android.com/apk/res/android}name')
-            if permission:
-                permissions.append(permission)
+    try:
+        tree = ET.parse(manifest_file)
+        root = tree.getroot()
+        for elem in root.iter():
+            if elem.tag.endswith('uses-permission'):
+                permission = elem.attrib.get('{http://schemas.android.com/apk/res/android}name')
+                if permission:
+                    permissions.append(permission)
+    except FileNotFoundError:
+        print("AndroidManifest.xml not found.")
     return permissions
+
+# Function to find package name and directory of Instagram app
+def find_instagram_app_info():
+    try:
+        output = subprocess.check_output(['adb', 'shell', 'pm', 'list', 'packages', '|', 'grep', 'instagram'])
+        output = output.decode('utf-8')
+        package_name = output.split(':')[1].strip()
+        output = subprocess.check_output(['adb', 'shell', 'pm', 'path', package_name])
+        output = output.decode('utf-8')
+        app_directory = re.search(r'package:(.*)', output).group(1).strip()
+        return package_name, app_directory
+    except subprocess.CalledProcessError:
+        print("Instagram app not found on the device.")
+        return None, None
+
+# Function to analyze Instagram app files
+def analyze_instagram_app(package_name, app_directory):
+    if package_name and app_directory:
+        try:
+            output = subprocess.check_output(['adb', 'shell', 'ls', app_directory])
+            output = output.decode('utf-8')
+            print("Files in Instagram app directory:")
+            print(output)
+        except subprocess.CalledProcessError as e:
+            print("Error analyzing Instagram app files:", e)
+    else:
+        print("Instagram app not found on the device.")
 
 # Function to scan code for potential security issues
 def scan_code(code_dir):
@@ -30,10 +63,8 @@ def scan_code(code_dir):
                 file_path = os.path.join(root, file)
                 with open(file_path, 'r', encoding='utf-8') as f:
                     content = f.read()
-                    # Example pattern: search for hardcoded API keys
                     if re.search(r'API_KEY', content):
                         security_issues.append(f"Hardcoded API key found in file: {file_path}")
-                    # Add more patterns for scanning here
     return security_issues
 
 # Function to scrape vulnerabilities from a webpage
@@ -43,7 +74,6 @@ def scrape_webpage_vulnerabilities(url):
     response = requests.get(url)
     if response.status_code == 200:
         soup = BeautifulSoup(response.text, 'html.parser')
-        # Example: scraping CVE IDs and descriptions from the webpage
         rows = soup.find_all('tr')
         for row in rows[1:]:
             cells = row.find_all('td')
@@ -53,39 +83,6 @@ def scrape_webpage_vulnerabilities(url):
                 vulnerabilities.append({'CVE ID': cve_id, 'Description': description})
 
     return vulnerabilities
-
-# Function to find package name and directory of Instagram app
-def find_instagram_app_info():
-    try:
-        # Run adb command to list packages and find Instagram app
-        output = subprocess.check_output(['adb', 'shell', 'pm', 'list', 'packages', '|', 'grep', 'instagram'])
-        output = output.decode('utf-8')
-        # Extract package name from output
-        package_name = output.split(':')[1].strip()
-        # Run adb command to get app info and extract app directory
-        output = subprocess.check_output(['adb', 'shell', 'pm', 'path', package_name])
-        output = output.decode('utf-8')
-        # Extract app directory from output
-        app_directory = re.search(r'package:(.*)', output).group(1).strip()
-        return package_name, app_directory
-    except subprocess.CalledProcessError as e:
-        print("Error finding Instagram app info:", e)
-        return None, None
-
-# Function to analyze Instagram app files
-def analyze_instagram_app(package_name, app_directory):
-    if package_name and app_directory:
-        print("Analyzing Instagram app files...")
-        # Example: List files in the app directory
-        try:
-            output = subprocess.check_output(['adb', 'shell', 'ls', app_directory])
-            output = output.decode('utf-8')
-            print("Files in Instagram app directory:")
-            print(output)
-        except subprocess.CalledProcessError as e:
-            print("Error analyzing Instagram app files:", e)
-    else:
-        print("Instagram app not found on the device.")
 
 # Main function
 def main():
@@ -99,7 +96,6 @@ def main():
     print("Finding Instagram app info...")
     package_name, app_directory = find_instagram_app_info()
 
-    # Analyze Instagram app files
     analyze_instagram_app(package_name, app_directory)
 
     print("Decompiling APK...")
@@ -130,8 +126,6 @@ def main():
             print(f"CVE ID: {vulnerability['CVE ID']}, Description: {vulnerability['Description']}")
     else:
         print("No vulnerabilities scraped from the webpage.")
-
-    # Dynamic analysis and further actions can be added here
 
 if __name__ == "__main__":
     main()
