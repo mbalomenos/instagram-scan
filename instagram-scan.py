@@ -54,16 +54,53 @@ def scrape_webpage_vulnerabilities(url):
 
     return vulnerabilities
 
+# Function to find package name and directory of Instagram app
+def find_instagram_app_info():
+    try:
+        # Run adb command to list packages and find Instagram app
+        output = subprocess.check_output(['adb', 'shell', 'pm', 'list', 'packages', '|', 'grep', 'instagram'])
+        output = output.decode('utf-8')
+        # Extract package name from output
+        package_name = output.split(':')[1].strip()
+        # Run adb command to get app info and extract app directory
+        output = subprocess.check_output(['adb', 'shell', 'pm', 'path', package_name])
+        output = output.decode('utf-8')
+        # Extract app directory from output
+        app_directory = re.search(r'package:(.*)', output).group(1).strip()
+        return package_name, app_directory
+    except subprocess.CalledProcessError as e:
+        print("Error finding Instagram app info:", e)
+        return None, None
+
+# Function to analyze Instagram app files
+def analyze_instagram_app(package_name, app_directory):
+    if package_name and app_directory:
+        print("Analyzing Instagram app files...")
+        # Example: List files in the app directory
+        try:
+            output = subprocess.check_output(['adb', 'shell', 'ls', app_directory])
+            output = output.decode('utf-8')
+            print("Files in Instagram app directory:")
+            print(output)
+        except subprocess.CalledProcessError as e:
+            print("Error analyzing Instagram app files:", e)
+    else:
+        print("Instagram app not found on the device.")
+
 # Main function
 def main():
     # Path to the Instagram APK file
     apk_file = 'Instagram.apk'
     # Output directory for decompiled APK
     output_dir = 'instagram_decompiled'
-    # IP address of the Android device on the local Wi-Fi network
-    android_device_ip = '192.168.1.5'
     # Output directory for scanning code
     code_dir = os.path.join(output_dir, 'sources')
+
+    print("Finding Instagram app info...")
+    package_name, app_directory = find_instagram_app_info()
+
+    # Analyze Instagram app files
+    analyze_instagram_app(package_name, app_directory)
 
     print("Decompiling APK...")
     decompile_apk(apk_file, output_dir)
@@ -94,13 +131,7 @@ def main():
     else:
         print("No vulnerabilities scraped from the webpage.")
 
-    print("\nRunning dynamic analysis (Nmap)...")
-    try:
-        nmap_output = subprocess.check_output(['nmap', '-p-', '--script', 'vulners', '-oG', '-', android_device_ip])
-        print("Nmap output:")
-        print(nmap_output.decode('utf-8'))
-    except subprocess.CalledProcessError as e:
-        print("Error running Nmap:", e)
+    # Dynamic analysis and further actions can be added here
 
 if __name__ == "__main__":
     main()
