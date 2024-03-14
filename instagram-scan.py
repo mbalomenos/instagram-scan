@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 import xml.etree.ElementTree as ET
 import subprocess
 import requests
@@ -9,7 +10,10 @@ from bs4 import BeautifulSoup
 def install_jadx():
     try:
         # Try installing JADX using apt
-        subprocess.run(['echo', 'kali' , '|', 'sudo', '-S', 'apt', 'install', 'jadx'])
+        result = subprocess.run(['echo', 'kali', '|', 'sudo', '-S', 'apt', 'install', 'jadx'], capture_output=True, text=True)
+        if result.returncode != 0:
+            raise Exception("JADX installation using apt failed.")
+
         # Check if JADX is installed successfully
         if shutil.which('jadx') is None:
             raise Exception("JADX installation using apt failed.")
@@ -22,6 +26,9 @@ def install_jadx():
             os.chdir('jadx')
             # Build JADX using gradlew
             subprocess.run(['./gradlew', 'dist'])
+            # Check if JADX is installed successfully
+            if shutil.which('jadx') is None:
+                raise Exception("JADX installation from GitHub failed.")
         except Exception as e:
             print("Error installing JADX from GitHub:", e)
 
