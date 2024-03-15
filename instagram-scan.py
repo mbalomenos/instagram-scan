@@ -13,24 +13,13 @@ def install_jadx():
         result = subprocess.run(['echo', 'kali', '|', 'sudo', '-S', 'apt', 'install', 'jadx'], capture_output=True, text=True)
         if result.returncode != 0:
             raise Exception("JADX installation using apt failed.")
-
+            
         # Check if JADX is installed successfully
         if shutil.which('jadx') is None:
             raise Exception("JADX installation using apt failed.")
     except Exception as e:
         print("Error installing JADX using apt:", e)
-        try:
-            # Clone JADX repository from GitHub
-            subprocess.run(['git', 'clone', 'https://github.com/skylot/jadx.git'])
-            # Change directory to JADX
-            os.chdir('jadx')
-            # Build JADX using gradlew
-            subprocess.run(['./gradlew', 'dist'])
-            # Check if JADX is installed successfully
-            if shutil.which('jadx') is None:
-                raise Exception("JADX installation from GitHub failed.")
-        except Exception as e:
-            print("Error installing JADX from GitHub:", e)
+        print("Please install JADX manually.")
 
 # Function to run JADX
 def run_jadx(apk_file, output_dir):
